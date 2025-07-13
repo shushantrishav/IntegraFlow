@@ -1,0 +1,374 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>backend.integrations.hubspot &mdash; IntegraFlow  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            IntegraFlow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../backend.html">backend package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../backend.main.html">backend.main module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../backend.redis_client.html">backend.redis_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../backend.logger.html">backend.logger module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../backend.integrations.notion.html">backend.integrations.notion module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../backend.integrations.hubspot.html">backend.integrations.hubspot module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../backend.integrations.airtable.html">backend.integrations.airtable module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../backend.integrations.integration_item.html">backend.integrations.integration_item module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">IntegraFlow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">backend.integrations.hubspot</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for backend.integrations.hubspot</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">secrets</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Request</span><span class="p">,</span> <span class="n">HTTPException</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi.responses</span><span class="w"> </span><span class="kn">import</span> <span class="n">HTMLResponse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dotenv</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_dotenv</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">unquote</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">backend.integrations.integration_item</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegrationItem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">backend.redis_client</span><span class="w"> </span><span class="kn">import</span> <span class="n">add_key_value_redis</span><span class="p">,</span> <span class="n">get_value_redis</span><span class="p">,</span> <span class="n">delete_key_redis</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">backend.logger</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+
+<span class="n">load_dotenv</span><span class="p">()</span>
+
+<span class="n">CLIENT_ID</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;HUBSPOT_CLIENT_ID&quot;</span><span class="p">)</span>
+<span class="n">CLIENT_SECRET</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;HUBSPOT_CLIENT_SECRET&quot;</span><span class="p">)</span>
+<span class="n">REDIRECT_URI</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;HUBSPOT_REDIRECT_URI&quot;</span><span class="p">)</span>
+<span class="n">SCOPES</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;HUBSPOT_SCOPES&quot;</span><span class="p">)</span>
+<span class="n">AUTH_URL</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;https://app.hubspot.com/oauth/authorize?client_id=</span><span class="si">{</span><span class="n">CLIENT_ID</span><span class="si">}</span><span class="s1">&amp;redirect_uri=</span><span class="si">{</span><span class="n">REDIRECT_URI</span><span class="si">}</span><span class="s1">&amp;scope=</span><span class="si">{</span><span class="n">SCOPES</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;%20&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span>
+
+
+<div class="viewcode-block" id="authorize_hubspot">
+<a class="viewcode-back" href="../../../backend.integrations.hubspot.html#backend.integrations.hubspot.authorize_hubspot">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">authorize_hubspot</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">org_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Initiates the HubSpot OAuth2 authorization flow.</span>
+
+<span class="sd">    Generates a unique state, stores it in Redis, and returns the HubSpot authorization URL.</span>
+
+<span class="sd">    :param user_id: The ID of the user initiating the authorization.</span>
+<span class="sd">    :type user_id: str</span>
+<span class="sd">    :param org_id: The ID of the organization.</span>
+<span class="sd">    :type org_id: str</span>
+<span class="sd">    :returns: The HubSpot authorization URL.</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;[HubSpot] Starting authorization for user=&#39;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&#39;, org=&#39;</span><span class="si">{</span><span class="n">org_id</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+    <span class="p">)</span>
+    <span class="n">state_data</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;state&quot;</span><span class="p">:</span> <span class="n">secrets</span><span class="o">.</span><span class="n">token_urlsafe</span><span class="p">(</span><span class="mi">32</span><span class="p">),</span>
+        <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">user_id</span><span class="p">,</span>
+        <span class="s2">&quot;org_id&quot;</span><span class="p">:</span> <span class="n">org_id</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">encoded_state</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">state_data</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">add_key_value_redis</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;hubspot_state:</span><span class="si">{</span><span class="n">org_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">encoded_state</span><span class="p">,</span> <span class="n">expire</span><span class="o">=</span><span class="mi">600</span>
+    <span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[HubSpot] Saved state in Redis for user=&#39;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">AUTH_URL</span><span class="si">}</span><span class="s2">&amp;state=</span><span class="si">{</span><span class="n">encoded_state</span><span class="si">}</span><span class="s2">&quot;</span></div>
+
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">unquote</span>
+
+<div class="viewcode-block" id="oauth2callback_hubspot">
+<a class="viewcode-back" href="../../../backend.integrations.hubspot.html#backend.integrations.hubspot.oauth2callback_hubspot">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">oauth2callback_hubspot</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handles the OAuth2 callback from HubSpot.</span>
+
+<span class="sd">    Validates the state, exchanges the authorization code for an access token,</span>
+<span class="sd">    and stores the credentials in Redis.</span>
+
+<span class="sd">    :param request: The FastAPI request object containing query parameters.</span>
+<span class="sd">    :type request: fastapi.Request</span>
+<span class="sd">    :raises HTTPException: If an OAuth error occurs, state mismatch, or token exchange fails.</span>
+<span class="sd">    :returns: An HTML response to close the browser window.</span>
+<span class="sd">    :rtype: fastapi.responses.HTMLResponse</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[HubSpot] OAuth2 callback received&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">query_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;error&quot;</span><span class="p">):</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">query_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;error&quot;</span><span class="p">)</span>
+        <span class="n">error_description</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">query_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;error_description&quot;</span><span class="p">,</span> <span class="s2">&quot;Unknown error during authorization.&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[HubSpot] OAuth error: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2"> | Description: </span><span class="si">{</span><span class="n">error_description</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;HubSpot OAuth error: </span><span class="si">{</span><span class="n">error_description</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">code</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">query_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;code&quot;</span><span class="p">)</span>
+        <span class="n">encoded_state</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">query_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;state&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Log the encoded state to check if it&#39;s correct</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[HubSpot] Encoded state: </span><span class="si">{</span><span class="n">encoded_state</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># URL-decode the state parameter before parsing</span>
+        <span class="n">decoded_state</span> <span class="o">=</span> <span class="n">unquote</span><span class="p">(</span><span class="n">encoded_state</span><span class="p">)</span>
+
+        <span class="c1"># Replace any &#39;+&#39; with spaces (URL decoding issue) and log the decoded state</span>
+        <span class="n">decoded_state</span> <span class="o">=</span> <span class="n">decoded_state</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;+&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Log the decoded state to check if it&#39;s properly decoded</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[HubSpot] Decoded state: </span><span class="si">{</span><span class="n">decoded_state</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">state_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">decoded_state</span><span class="p">)</span>
+
+        <span class="n">original_state</span> <span class="o">=</span> <span class="n">state_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;state&quot;</span><span class="p">)</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">state_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">)</span>
+        <span class="n">org_id</span> <span class="o">=</span> <span class="n">state_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;org_id&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Validate the state against what was saved in Redis</span>
+        <span class="n">saved_state</span> <span class="o">=</span> <span class="k">await</span> <span class="n">get_value_redis</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hubspot_state:</span><span class="si">{</span><span class="n">org_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">saved_state</span> <span class="ow">or</span> <span class="n">original_state</span> <span class="o">!=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">saved_state</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;state&quot;</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[HubSpot] OAuth2 state mismatch for user=&#39;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&#39;, org=&#39;</span><span class="si">{</span><span class="n">org_id</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;State validation failed.&quot;</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[HubSpot] State validated for user=&#39;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&#39;, requesting token&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Fetch the token now</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+                <span class="s2">&quot;https://api.hubapi.com/oauth/v1/token&quot;</span><span class="p">,</span>
+                <span class="n">data</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s2">&quot;grant_type&quot;</span><span class="p">:</span> <span class="s2">&quot;authorization_code&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;client_id&quot;</span><span class="p">:</span> <span class="n">CLIENT_ID</span><span class="p">,</span>
+                    <span class="s2">&quot;client_secret&quot;</span><span class="p">:</span> <span class="n">CLIENT_SECRET</span><span class="p">,</span>
+                    <span class="s2">&quot;redirect_uri&quot;</span><span class="p">:</span> <span class="n">REDIRECT_URI</span><span class="p">,</span>
+                    <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="n">code</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Content-Type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/x-www-form-urlencoded&quot;</span><span class="p">},</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[HubSpot] Token exchange failed: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Failed to exchange authorization code.&quot;</span><span class="p">)</span>
+
+        <span class="n">credentials</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="c1"># Save the credentials to Redis</span>
+        <span class="k">await</span> <span class="n">add_key_value_redis</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;hubspot_credentials:</span><span class="si">{</span><span class="n">org_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">credentials</span><span class="p">),</span>
+            <span class="n">expire</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[HubSpot] Token exchange successful for user=&#39;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">HTMLResponse</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="s2">&quot;&lt;html&gt;&lt;script&gt;window.close();&lt;/script&gt;&lt;/html&gt;&quot;</span><span class="p">)</span>
+
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">&quot;[HubSpot] Unexpected error during OAuth callback&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;OAuth callback failed.&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_hubspot_credentials">
+<a class="viewcode-back" href="../../../backend.integrations.hubspot.html#backend.integrations.hubspot.get_hubspot_credentials">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_hubspot_credentials</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">org_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieves HubSpot credentials for a given user and organization from Redis.</span>
+
+<span class="sd">    Deletes the credentials from Redis after retrieval.</span>
+
+<span class="sd">    :param user_id: The ID of the user.</span>
+<span class="sd">    :type user_id: str</span>
+<span class="sd">    :param org_id: The ID of the organization.</span>
+<span class="sd">    :type org_id: str</span>
+<span class="sd">    :raises HTTPException: If no credentials are found.</span>
+<span class="sd">    :returns: A dictionary containing the HubSpot credentials.</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;[HubSpot] Retrieving credentials for user=&#39;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&#39;, org=&#39;</span><span class="si">{</span><span class="n">org_id</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+    <span class="p">)</span>
+    <span class="n">credentials</span> <span class="o">=</span> <span class="k">await</span> <span class="n">get_value_redis</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hubspot_credentials:</span><span class="si">{</span><span class="n">org_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">credentials</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[HubSpot] No credentials found in Redis for user=&#39;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;No credentials found.&quot;</span><span class="p">)</span>
+
+    <span class="k">await</span> <span class="n">delete_key_redis</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hubspot_credentials:</span><span class="si">{</span><span class="n">org_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[HubSpot] Deleted credentials from Redis for user=&#39;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">credentials</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="create_integration_item_metadata_object">
+<a class="viewcode-back" href="../../../backend.integrations.hubspot.html#backend.integrations.hubspot.create_integration_item_metadata_object">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create_integration_item_metadata_object</span><span class="p">(</span><span class="n">response_json</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates an IntegrationItem object from HubSpot contact response data.</span>
+
+<span class="sd">    :param response_json: The JSON response data for a HubSpot contact.</span>
+<span class="sd">    :type response_json: dict</span>
+<span class="sd">    :returns: An IntegrationItem object representing the HubSpot contact.</span>
+<span class="sd">    :rtype: IntegrationItem</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">properties</span> <span class="o">=</span> <span class="n">response_json</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;properties&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="k">return</span> <span class="n">IntegrationItem</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="n">response_json</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">),</span>
+        <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;HubSpot_Contact&quot;</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">properties</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;firstname&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">properties</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;lastname&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
+        <span class="n">creation_time</span><span class="o">=</span><span class="n">properties</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;createdAt&quot;</span><span class="p">),</span>
+        <span class="n">email</span><span class="o">=</span><span class="n">properties</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;email&quot;</span><span class="p">),</span>
+        <span class="n">phone_number</span><span class="o">=</span><span class="n">properties</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phone&quot;</span><span class="p">),</span>
+        <span class="n">company_name</span><span class="o">=</span><span class="n">properties</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;company&quot;</span><span class="p">),</span>
+        <span class="n">employment_role</span><span class="o">=</span><span class="n">properties</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;jobtitle&quot;</span><span class="p">),</span>
+        <span class="n">lead_status</span><span class="o">=</span><span class="n">properties</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;hs_lead_status&quot;</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_items_hubspot">
+<a class="viewcode-back" href="../../../backend.integrations.hubspot.html#backend.integrations.hubspot.get_items_hubspot">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_items_hubspot</span><span class="p">(</span><span class="n">credentials</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetches HubSpot contacts for a given set of credentials.</span>
+
+<span class="sd">    Checks for cached contacts in Redis. If not found, fetches from HubSpot API,</span>
+<span class="sd">    creates `IntegrationItem` objects, and caches the results.</span>
+
+<span class="sd">    :param credentials: A JSON string containing the HubSpot access token.</span>
+<span class="sd">    :type credentials: str</span>
+<span class="sd">    :raises HTTPException: If fetching contacts fails or an unexpected error occurs.</span>
+<span class="sd">    :returns: A list of dictionaries, each representing a HubSpot contact.</span>
+<span class="sd">    :rtype: list[dict]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[HubSpot] Loading contact list&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">credentials</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">credentials</span><span class="p">)</span>
+        <span class="n">access_token</span> <span class="o">=</span> <span class="n">credentials</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;access_token&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Hash token to use as Redis key</span>
+        <span class="n">token_hash</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">access_token</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+        <span class="n">redis_key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;hubspot_items_cache:</span><span class="si">{</span><span class="n">token_hash</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="c1"># Check cache</span>
+        <span class="n">cached</span> <span class="o">=</span> <span class="k">await</span> <span class="n">get_value_redis</span><span class="p">(</span><span class="n">redis_key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cached</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[HubSpot] Retrieving cached contacts from Redis&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">cached</span><span class="p">)</span>
+
+        <span class="c1"># Fetch from HubSpot API</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="n">access_token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Content-Type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;https://api.hubapi.com/crm/v3/objects/contacts&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;limit&quot;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
+            <span class="s2">&quot;properties&quot;</span><span class="p">:</span> <span class="s2">&quot;firstname,lastname,email,phone,company,jobtitle,hs_lead_status,createdAt&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+        
+        <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[HubSpot] Contact fetch failed: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span>
+                <span class="n">status_code</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span>
+                <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Failed to fetch HubSpot contacts&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="n">contacts</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;results&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="k">await</span> <span class="n">create_integration_item_metadata_object</span><span class="p">(</span><span class="n">contact</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">contact</span> <span class="ow">in</span> <span class="n">contacts</span>
+        <span class="p">]</span>
+        <span class="n">items_cleaned</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
+
+        <span class="c1"># Cache result for 5 mins</span>
+        <span class="k">await</span> <span class="n">add_key_value_redis</span><span class="p">(</span><span class="n">redis_key</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">items_cleaned</span><span class="p">),</span> <span class="n">expire</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[HubSpot] Retrieved and cached </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">items_cleaned</span><span class="p">)</span><span class="si">}</span><span class="s2"> contacts&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">items_cleaned</span>
+
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">&quot;[HubSpot] Unexpected error while fetching contacts&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;HubSpot data fetch failed.&quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, shushant rishav.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

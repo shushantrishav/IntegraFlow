@@ -1,0 +1,7 @@
+backend.integrations.integration\_item module
+=============================================
+
+.. automodule:: backend.integrations.integration_item
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,18 @@
+backend.integrations package
+============================
+
+.. automodule:: backend.integrations
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   backend.integrations.airtable
+   backend.integrations.hubspot
+   backend.integrations.integration_item
+   backend.integrations.notion

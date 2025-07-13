@@ -1,0 +1,7 @@
+backend.redis_client module
+============================
+
+.. automodule:: backend.redis_client
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,7 @@
+backend.integrations.airtable module
+====================================
+
+.. automodule:: backend.integrations.airtable
+   :members:
+   :undoc-members:
+   :show-inheritance:
