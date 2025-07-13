@@ -88,7 +88,8 @@ npm run start
 PYTHONPATH=. pytest
 ```
 ## 📷 Frontend Preview
-<img width="1920" height="1826" alt="screencapture-localhost-3000-2025-07-13-15_50_20" src="https://github.com/user-attachments/assets/15f99d7a-d3bb-4c85-b83d-7b5df179b704" />
+<img width="1920" height="1826" alt="image" src="https://github.com/user-attachments/assets/f5e3b58a-896b-4d62-8b3b-fae178243e4c" />
+
 
 ## Documentation
 #### Sphinx-generated HTML docs are available in the /docs/build/html directory after running:
