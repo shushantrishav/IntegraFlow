@@ -1,0 +1,68 @@
+/* Variables for dark theme */
+:root {
+    --primary-color: #63b3ed; /* Softer blue for primary actions */
+    --primary-dark: #4299e1; /* Darker shade for hover states */
+    --secondary-color: #718096; /* Grey for secondary actions */
+    --danger-color: #fc8181; /* Red for destructive actions */
+    --success-color: #48bb78; /* Green for success/connected status */
+
+    --text-color: #e2e8f0; /* Light grey for main text */
+    --text-light-color: #a0aec0; /* Medium grey for secondary text/labels */
+
+    --background-color: #1a202c; /* Dark blue-grey for page background */
+    --card-background: #2d3748; /* Slightly lighter dark blue-grey for cards */
+    --border-color: #4a5568; /* Darker grey for borders */
+    --shadow-color: rgba(0, 0, 0, 0.4); /* More pronounced shadow for dark theme */
+
+    --table-header-bg: #2f3a4b; /* Darker background for table headers */
+    --table-row-even-bg: #2d3748; /* Same as card background for even rows */
+    --table-row-odd-bg: #242c38; /* Slightly darker for odd rows */
+    --table-row-hover-bg: #3a475a; /* Hover background for table rows */
+
+    --border-radius: 8px; /* Standard border radius for all elements */
+    --font-family: 'Inter', sans-serif; /* Modern sans-serif font */
+}
+
+/* Global body styling */
+body {
+  height: 100vh;
+  width: 100%;
+  margin: 0;
+  font-family: var(--font-family); /* Use Inter font */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+  background-color: var(--background-color); /* Apply dark background */
+  color: var(--text-color); /* Apply light text color */
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Fix for table container scrolling cleanly */
+.table-wrapper {
+  max-width: calc(100vw - 10%);
+  margin: 0 auto;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+}
+
+/* Custom Alert Box Styling (for JS messages) */
+#customAlertBox {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 25px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4); /* Stronger shadow for dark theme */
+    min-width: 250px;
+    text-align: center;
+}

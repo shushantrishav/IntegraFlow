@@ -1,0 +1,400 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>backend.main &mdash; IntegraFlow  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            IntegraFlow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.html">backend package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.main.html">backend.main module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.redis_client.html">backend.redis_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.logger.html">backend.logger module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.integrations.notion.html">backend.integrations.notion module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.integrations.hubspot.html">backend.integrations.hubspot module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.integrations.airtable.html">backend.integrations.airtable module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.integrations.integration_item.html">backend.integrations.integration_item module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">IntegraFlow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">backend.main</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for backend.main</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span><span class="p">,</span> <span class="n">Form</span><span class="p">,</span> <span class="n">Request</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi.middleware.cors</span><span class="w"> </span><span class="kn">import</span> <span class="n">CORSMiddleware</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi.responses</span><span class="w"> </span><span class="kn">import</span> <span class="n">JSONResponse</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">RequestValidationError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">starlette.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">HTTPException</span> <span class="k">as</span> <span class="n">StarletteHTTPException</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">backend.integrations.airtable</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">authorize_airtable</span><span class="p">,</span> <span class="n">get_items_airtable</span><span class="p">,</span>
+    <span class="n">oauth2callback_airtable</span><span class="p">,</span> <span class="n">get_airtable_credentials</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">backend.integrations.notion</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">authorize_notion</span><span class="p">,</span> <span class="n">get_items_notion</span><span class="p">,</span>
+    <span class="n">oauth2callback_notion</span><span class="p">,</span> <span class="n">get_notion_credentials</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">backend.integrations.hubspot</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">authorize_hubspot</span><span class="p">,</span> <span class="n">get_hubspot_credentials</span><span class="p">,</span>
+    <span class="n">get_items_hubspot</span><span class="p">,</span> <span class="n">oauth2callback_hubspot</span>
+<span class="p">)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">backend.logger</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">()</span>
+
+<span class="c1"># CORS config for frontend dev</span>
+<span class="n">origins</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;http://localhost:3000&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span>
+    <span class="n">CORSMiddleware</span><span class="p">,</span>
+    <span class="n">allow_origins</span><span class="o">=</span><span class="n">origins</span><span class="p">,</span>
+    <span class="n">allow_credentials</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">allow_methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;*&quot;</span><span class="p">],</span>
+    <span class="n">allow_headers</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;*&quot;</span><span class="p">],</span>
+<span class="p">)</span>
+
+<span class="c1"># --- Optional Global Exception Logging ---</span>
+<div class="viewcode-block" id="http_exception_handler">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.http_exception_handler">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">exception_handler</span><span class="p">(</span><span class="n">StarletteHTTPException</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">http_exception_handler</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span> <span class="n">exc</span><span class="p">:</span> <span class="n">StarletteHTTPException</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Global exception handler for Starlette HTTPExceptions.</span>
+
+<span class="sd">    Logs the exception and returns a JSON response with the error detail.</span>
+
+<span class="sd">    :param request: The FastAPI request object.</span>
+<span class="sd">    :type request: fastapi.Request</span>
+<span class="sd">    :param exc: The Starlette HTTPException instance.</span>
+<span class="sd">    :type exc: starlette.exceptions.HTTPException</span>
+<span class="sd">    :returns: A JSON response with the error detail.</span>
+<span class="sd">    :rtype: fastapi.responses.JSONResponse</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[HTTPException] </span><span class="si">{</span><span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="n">detail</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">JSONResponse</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="n">exc</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;detail&quot;</span><span class="p">:</span> <span class="n">exc</span><span class="o">.</span><span class="n">detail</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="validation_exception_handler">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.validation_exception_handler">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">exception_handler</span><span class="p">(</span><span class="n">RequestValidationError</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">validation_exception_handler</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span> <span class="n">exc</span><span class="p">:</span> <span class="n">RequestValidationError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Global exception handler for FastAPI RequestValidationErrors.</span>
+
+<span class="sd">    Logs the validation errors and returns a JSON response with the error details.</span>
+
+<span class="sd">    :param request: The FastAPI request object.</span>
+<span class="sd">    :type request: fastapi.Request</span>
+<span class="sd">    :param exc: The RequestValidationError instance.</span>
+<span class="sd">    :type exc: fastapi.exceptions.RequestValidationError</span>
+<span class="sd">    :returns: A JSON response with the validation error details.</span>
+<span class="sd">    :rtype: fastapi.responses.JSONResponse</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ValidationError] </span><span class="si">{</span><span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="n">errors</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">JSONResponse</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">422</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;detail&quot;</span><span class="p">:</span> <span class="n">exc</span><span class="o">.</span><span class="n">errors</span><span class="p">()})</span></div>
+
+
+<div class="viewcode-block" id="read_root">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.read_root">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">read_root</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Root endpoint for the API.</span>
+
+<span class="sd">    Returns a simple &quot;Ping&quot;: &quot;Pong&quot; message to indicate the API is running.</span>
+
+<span class="sd">    :returns: A dictionary with &quot;Ping&quot;: &quot;Pong&quot;.</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[Startup] Ping received at root &#39;/&#39;&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;Ping&#39;</span><span class="p">:</span> <span class="s1">&#39;Pong&#39;</span><span class="p">}</span></div>
+
+
+<span class="c1"># --- Airtable ---</span>
+<div class="viewcode-block" id="authorize_airtable_integration">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.authorize_airtable_integration">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;/integrations/airtable/authorize&#39;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">authorize_airtable_integration</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">),</span> <span class="n">org_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Endpoint to initiate Airtable OAuth2 authorization.</span>
+
+<span class="sd">    :param user_id: The ID of the user.</span>
+<span class="sd">    :type user_id: str</span>
+<span class="sd">    :param org_id: The ID of the organization.</span>
+<span class="sd">    :type org_id: str</span>
+<span class="sd">    :returns: The authorization URL for Airtable.</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">authorize_airtable</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">org_id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="oauth2callback_airtable_integration">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.oauth2callback_airtable_integration">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/integrations/airtable/oauth2callback&#39;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">oauth2callback_airtable_integration</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Endpoint for Airtable OAuth2 callback.</span>
+
+<span class="sd">    Handles the redirection from Airtable after user authorization.</span>
+
+<span class="sd">    :param request: The FastAPI request object.</span>
+<span class="sd">    :type request: fastapi.Request</span>
+<span class="sd">    :returns: An HTML response to close the window.</span>
+<span class="sd">    :rtype: fastapi.responses.HTMLResponse</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">oauth2callback_airtable</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_airtable_credentials_integration">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.get_airtable_credentials_integration">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;/integrations/airtable/credentials&#39;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_airtable_credentials_integration</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">),</span> <span class="n">org_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Endpoint to retrieve Airtable credentials.</span>
+
+<span class="sd">    :param user_id: The ID of the user.</span>
+<span class="sd">    :type user_id: str</span>
+<span class="sd">    :param org_id: The ID of the organization.</span>
+<span class="sd">    :type org_id: str</span>
+<span class="sd">    :returns: Airtable credentials.</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">get_airtable_credentials</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">org_id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_airtable_items">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.get_airtable_items">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;/integrations/airtable/load&#39;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_airtable_items</span><span class="p">(</span><span class="n">credentials</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Endpoint to load items from Airtable using provided credentials.</span>
+
+<span class="sd">    :param credentials: JSON string of Airtable credentials.</span>
+<span class="sd">    :type credentials: str</span>
+<span class="sd">    :returns: A list of Airtable items (bases and tables).</span>
+<span class="sd">    :rtype: list[dict]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">get_items_airtable</span><span class="p">(</span><span class="n">credentials</span><span class="p">)</span></div>
+
+
+<span class="c1"># --- Notion ---</span>
+<div class="viewcode-block" id="authorize_notion_integration">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.authorize_notion_integration">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;/integrations/notion/authorize&#39;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">authorize_notion_integration</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">),</span> <span class="n">org_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Endpoint to initiate Notion OAuth2 authorization.</span>
+
+<span class="sd">    :param user_id: The ID of the user.</span>
+<span class="sd">    :type user_id: str</span>
+<span class="sd">    :param org_id: The ID of the organization.</span>
+<span class="sd">    :type org_id: str</span>
+<span class="sd">    :returns: The authorization URL for Notion.</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">authorize_notion</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">org_id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="oauth2callback_notion_integration">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.oauth2callback_notion_integration">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/integrations/notion/oauth2callback&#39;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">oauth2callback_notion_integration</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Endpoint for Notion OAuth2 callback.</span>
+
+<span class="sd">    Handles the redirection from Notion after user authorization.</span>
+
+<span class="sd">    :param request: The FastAPI request object.</span>
+<span class="sd">    :type request: fastapi.Request</span>
+<span class="sd">    :returns: An HTML response to close the window.</span>
+<span class="sd">    :rtype: fastapi.responses.HTMLResponse</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">oauth2callback_notion</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_notion_credentials_integration">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.get_notion_credentials_integration">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;/integrations/notion/credentials&#39;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_notion_credentials_integration</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">),</span> <span class="n">org_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Endpoint to retrieve Notion credentials.</span>
+
+<span class="sd">    :param user_id: The ID of the user.</span>
+<span class="sd">    :type user_id: str</span>
+<span class="sd">    :param org_id: The ID of the organization.</span>
+<span class="sd">    :type org_id: str</span>
+<span class="sd">    :returns: Notion credentials.</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">get_notion_credentials</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">org_id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_notion_items">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.get_notion_items">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;/integrations/notion/load&#39;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_notion_items</span><span class="p">(</span><span class="n">credentials</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Endpoint to load items from Notion using provided credentials.</span>
+
+<span class="sd">    :param credentials: JSON string of Notion credentials.</span>
+<span class="sd">    :type credentials: str</span>
+<span class="sd">    :returns: A list of Notion items.</span>
+<span class="sd">    :rtype: list[dict]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">get_items_notion</span><span class="p">(</span><span class="n">credentials</span><span class="p">)</span></div>
+
+
+<span class="c1"># --- HubSpot ---</span>
+<div class="viewcode-block" id="authorize_hubspot_integration">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.authorize_hubspot_integration">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;/integrations/hubspot/authorize&#39;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">authorize_hubspot_integration</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">),</span> <span class="n">org_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Endpoint to initiate HubSpot OAuth2 authorization.</span>
+
+<span class="sd">    :param user_id: The ID of the user.</span>
+<span class="sd">    :type user_id: str</span>
+<span class="sd">    :param org_id: The ID of the organization.</span>
+<span class="sd">    :type org_id: str</span>
+<span class="sd">    :returns: The authorization URL for HubSpot.</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">authorize_hubspot</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">org_id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="oauth2callback_hubspot_integration">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.oauth2callback_hubspot_integration">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/integrations/hubspot/oauth2callback&#39;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">oauth2callback_hubspot_integration</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Endpoint for HubSpot OAuth2 callback.</span>
+
+<span class="sd">    Handles the redirection from HubSpot after user authorization.</span>
+
+<span class="sd">    :param request: The FastAPI request object.</span>
+<span class="sd">    :type request: fastapi.Request</span>
+<span class="sd">    :returns: An HTML response to close the window.</span>
+<span class="sd">    :rtype: fastapi.responses.HTMLResponse</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">oauth2callback_hubspot</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_hubspot_credentials_integration">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.get_hubspot_credentials_integration">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;/integrations/hubspot/credentials&#39;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_hubspot_credentials_integration</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">),</span> <span class="n">org_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Endpoint to retrieve HubSpot credentials.</span>
+
+<span class="sd">    :param user_id: The ID of the user.</span>
+<span class="sd">    :type user_id: str</span>
+<span class="sd">    :param org_id: The ID of the organization.</span>
+<span class="sd">    :type org_id: str</span>
+<span class="sd">    :returns: HubSpot credentials.</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">get_hubspot_credentials</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">org_id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_hubspot_items">
+<a class="viewcode-back" href="../../backend.main.html#backend.main.get_hubspot_items">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;/integrations/hubspot/load&#39;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_hubspot_items</span><span class="p">(</span><span class="n">credentials</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Form</span><span class="p">(</span><span class="o">...</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Endpoint to load items (contacts) from HubSpot using provided credentials.</span>
+
+<span class="sd">    :param credentials: JSON string of HubSpot credentials.</span>
+<span class="sd">    :type credentials: str</span>
+<span class="sd">    :returns: A list of HubSpot contact items.</span>
+<span class="sd">    :rtype: list[dict]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">get_items_hubspot</span><span class="p">(</span><span class="n">credentials</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, shushant rishav.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

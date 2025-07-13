@@ -1,0 +1,25 @@
+backend package
+===============
+
+.. automodule:: backend
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   backend.integrations
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   backend.logger
+   backend.main
+   backend.redis_client

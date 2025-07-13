@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.log
+*.sqlite3
+*.env
+.env.*
+*.db
+venv/
+.envrc
+.mypy_cache/
+.pytest_cache/
+.coverage
+.cache/
+
+# Redis dump
+dump.rdb
+
+# FastAPI logs
+logs/
+*.log
+
+# Sphinx documentation
+docs/source/modules.rst
+*.autosummary
+*.rst
+
+# Node / React frontend
+frontend/node_modules/
+frontend/build/
+frontend/.env
+frontend/.eslintcache
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Mac / Linux
+.DS_Store
+.idea/
+
+# System
+Thumbs.db
+ehthumbs.db
